@@ -1,0 +1,11 @@
+:toc: left
+:source-highlighter: pygments
+:doctype: book
+:idprefix:
+:docinfo:
+
+# mini-pcsc
+
+A very minimal `libpcsc` implementation using the GnuPG `ccid-driver.c` code.
+Ideal for getting access to smartcards in environments where `pcscd` is too
+heavy or malfunctions (e.g. initramfs).
