@@ -1,0 +1,17 @@
+CODEABI_1.0 {
+    global:
+    	g_rgSCardT0Pci;
+    	g_rgSCardT1Pci;
+    	g_rgSCardRawPci;
+    	SCardEstablishContext;
+    	SCardReleaseContext;
+    	SCardReconnect;
+    	SCardListReaders;
+    	SCardConnect;
+    	SCardBeginTransaction;
+    	SCardEndTransaction;
+    	SCardTransmit;
+    	pcsc_stringify_error;
+    	SCardDisconnect;
+    local: *;
+};
