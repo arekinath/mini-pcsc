@@ -30,6 +30,7 @@ struct context {
 };
 static struct context *pcsc_ctx_first;
 static LONG pcsc_ctx_next = 0x7001;
+static int pcsc_atexit = 0;
 
 struct reader_context {
 	struct reader_context *rctx_next;
@@ -77,6 +78,23 @@ pcsc_rdr_get(SCARDHANDLE id)
 	return (NULL);
 }
 
+static void
+pcsc_atexit_handler(void)
+{
+	struct context *ctx;
+	struct reader_context *rctx;
+
+	ctx = pcsc_ctx_first;
+	while (ctx != NULL) {
+		rctx = ctx->ctx_readers;
+		while (rctx != NULL) {
+			ccid_close_reader(rctx->rctx_drv);
+			rctx = rctx->rctx_next;
+		}
+		ctx = ctx->ctx_next;
+	}
+}
+
 PCSC_API LONG
 SCardEstablishContext(DWORD dwScope, LPCVOID pvReserved1, LPCVOID pvReserved2,
     LPSCARDCONTEXT phContext)
@@ -102,6 +120,12 @@ SCardEstablishContext(DWORD dwScope, LPCVOID pvReserved1, LPCVOID pvReserved2,
 	ctx->ctx_next = pcsc_ctx_first;
 	pcsc_ctx_first = ctx;
 	*phContext = ctx->ctx_id;
+
+	if (pcsc_atexit == 0) {
+		pcsc_atexit = 1;
+		atexit(pcsc_atexit_handler);
+	}
+
 	return (SCARD_S_SUCCESS);
 }
 

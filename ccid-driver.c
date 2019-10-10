@@ -2019,8 +2019,9 @@ bulk_in (ccid_driver_t handle, unsigned char *buffer, size_t length,
   if (msglen < 10)
     {
       DEBUGOUT_1 ("bulk-in msg too short (%u)\n", (unsigned int)msglen);
-      abort_cmd (handle, seqno);
-      return CCID_DRIVER_ERR_INV_VALUE;
+      //abort_cmd (handle, seqno);
+      //goto retry;
+      return CCID_DRIVER_ERR_INCOMPLETE_CARD_RESPONSE;
     }
   if (buffer[5] != 0)
     {
@@ -2414,7 +2415,7 @@ ccid_slot_status (ccid_driver_t handle, int *statusbits, int on_wire)
      status and debugging enabled. */
   rc = bulk_in (handle, msg, sizeof msg, &msglen, RDR_to_PC_SlotStatus,
                 seqno, retries? 1000 : 200, 1);
-  if (rc == CCID_DRIVER_ERR_CARD_IO_ERROR && retries < 3)
+  if ((rc == CCID_DRIVER_ERR_CARD_IO_ERROR || rc == CCID_DRIVER_ERR_INCOMPLETE_CARD_RESPONSE) && retries < 3)
     {
       if (!retries)
         {
