@@ -1310,11 +1310,13 @@ ccid_dev_scan (int *idx_max_p, struct ccid_dev_table **t_p)
 {
   ssize_t n;
   libusb_device *dev;
-  int i;
+  int i, j;
   int ifc_no;
   int set_no;
   int idx = 0;
   int rc;
+  char *tmp;
+  int tmplen;
   errf_t *err = NULL;
 
   *idx_max_p = 0;
@@ -1329,6 +1331,8 @@ ccid_dev_scan (int *idx_max_p, struct ccid_dev_table **t_p)
         }
       initialized_usb = 1;
     }
+
+  DEBUGOUT ("CCID starting device scan\n");
 
   n = libusb_get_device_list (NULL, &ccid_usb_dev_list);
   for (i = 0; i < n; i++)
@@ -1397,6 +1401,23 @@ ccid_dev_scan (int *idx_max_p, struct ccid_dev_table **t_p)
                 ccid_dev_table[idx].desc = make_reader_id(idev,
                   desc.idVendor, desc.idProduct, desc.iManufacturer,
                   desc.iProduct, desc.iSerialNumber);
+
+                for (j = 0; j < idx; ++j) {
+                  if (strcmp(ccid_dev_table[j].desc,
+                      ccid_dev_table[idx].desc) == 0) {
+                    tmplen = strlen(ccid_dev_table[idx].desc) + 3;
+                    tmp = malloc(tmplen);
+                    strcpy(tmp, ccid_dev_table[idx].desc);
+                    tmp[tmplen - 3] = ' ';
+                    tmp[tmplen - 2] = 'A' + idx;
+                    tmp[tmplen - 1] = '\0';
+                    free(ccid_dev_table[idx].desc);
+                    ccid_dev_table[idx].desc = tmp;
+                  }
+                }
+
+                DEBUGOUT_2 ("CCID device at index %d: %s\n", idx,
+                    ccid_dev_table[idx].desc);
 
                 libusb_close(idev);
                 idev = NULL;
@@ -1682,9 +1703,26 @@ ccid_open_usb_reader (const char *spec_reader_name,
     }
 
   rc = libusb_claim_interface (idev, ifc_no);
+  switch (rc) {
+  case 0:
+    break;
+  case LIBUSB_ERROR_NOT_FOUND:
+  case LIBUSB_ERROR_NO_DEVICE:
+    DEBUGOUT_1 ("usb_claim_interface failed: device gone (%d)\n", rc);
+    rc = CCID_DRIVER_ERR_NO_READER;
+    goto leave;
+  case LIBUSB_ERROR_BUSY:
+    DEBUGOUT_1 ("usb_claim_interface failed: busy (%d)\n", rc);
+    rc = CCID_DRIVER_ERR_BUSY;
+    goto leave;
+  default:
+    DEBUGOUT_1 ("usb_claim_interface failed: %d\n", rc);
+    rc = CCID_DRIVER_ERR_CARD_IO_ERROR;
+    goto leave;
+  }
   if (rc)
     {
-      DEBUGOUT_1 ("usb_claim_interface failed: %d\n", rc);
+
       rc = CCID_DRIVER_ERR_CARD_IO_ERROR;
       goto leave;
     }
@@ -1846,7 +1884,7 @@ ccid_set_progress_cb (ccid_driver_t handle,
 
 int
 ccid_set_prompt_cb (ccid_driver_t handle,
-		    void (*cb)(void *, int), void *cb_arg)
+        void (*cb)(void *, int), void *cb_arg)
 {
   if (!handle)
     return CCID_DRIVER_ERR_INV_VALUE;
@@ -2054,7 +2092,7 @@ bulk_in (ccid_driver_t handle, unsigned char *buffer, size_t length,
       if (buffer[8] == 0xff && !notified)
         {
           notified = 1;
-	  handle->prompt_cb (handle->prompt_cb_arg, 1);
+          handle->prompt_cb (handle->prompt_cb_arg, 1);
         }
 
       goto retry;
@@ -3361,7 +3399,7 @@ ccid_transceive (ccid_driver_t handle,
               /* Wait time extension request. */
               unsigned char bwi = tpdu[3];
 
-	      wait_more = bwi;
+              wait_more = bwi;
 
               msg = send_buffer;
               tpdu = msg + hdrlen;
