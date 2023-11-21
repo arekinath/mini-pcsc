@@ -55,7 +55,7 @@ pcsc_ctx_get(SCARDCONTEXT id)
 			break;
 		ctx = ctx->ctx_next;
 	}
-	if (ctx->ctx_id == id)
+	if (ctx != NULL && ctx->ctx_id == id)
 		return (ctx);
 	return (NULL);
 }
@@ -73,7 +73,7 @@ pcsc_rdr_get(SCARDHANDLE id)
 			break;
 		rctx = rctx->rctx_next;
 	}
-	if (rctx->rctx_id == id)
+	if (rctx != NULL && rctx->rctx_id == id)
 		return (rctx);
 	return (NULL);
 }
